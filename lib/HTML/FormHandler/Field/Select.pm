@@ -97,6 +97,26 @@ See also L<HTML::FormHandler::Model::DBIC>, the 'lookup_options' method.
 
 =back
 
+The options field should contain one of the following data structures:
+
+=over
+
+=item ArrayRef of HashRefs
+
+Each hash reference defines an option, with the label and value
+attributes corresponding to those of the HTML field.
+
+=item ArrayRef
+
+A list of key/value pairs corresponding to HTML field values and labels.
+
+=item ArrayRef containing one ArrayRef
+
+Each item inside the inner ArrayRef defines both the label and value of
+an option.
+
+=back
+
 =head2 Customizing options
 
 Additional attributes can be added in the options array hashref, by using
@@ -160,8 +180,8 @@ option groups.
 
 =head2 options
 
-This is an array of hashes for this field.
-Each has must have a label and value keys.
+The options available for this field as defined in the L<< /DESCRIPTION
+>> above.
 
 =head2 options_method
 
@@ -287,6 +307,11 @@ containing options:
 
 The select rendering widgets all have a 'render_option' method, which may be useful
 for situations when you want to split up the rendering of a radio group or checkbox group.
+
+=head2 Rendering with Template Toolkit
+
+Calling 'options' from Template Toolkit can causes issues with wantarray when there
+is only a single option. As a solution you should use 'options_ref'.
 
 =head1 Database relations
 
@@ -578,8 +603,15 @@ sub _load_options {
                                # from a table, already set options attributes stays put
 
     # allow returning arrayref
-    if ( ref $options[0] eq 'ARRAY' ) {
-        @options = @{ $options[0] };
+    my $first_option = $options[0];
+    if ( ref $first_option eq 'ARRAY' ) {
+        if ( ref $first_option->[0] eq 'ARRAY' ) {
+            @options = map { label => $_, value => $_ },
+                @{ $first_option->[0] };
+        }
+        else {
+            @options = @$first_option;
+        }
     }
     return unless @options;
     my $opts;
